@@ -1,12 +1,14 @@
-mod secure;
 mod fast;
+mod secure;
 
-pub use secure::SecureMultisetHash;
 pub use fast::FastMultisetHash;
+pub use secure::SecureMultisetHash;
 
 pub trait MultisetHash: Clone {
     /// Creates a new, empty multiset hash.
-    fn new() -> Self where Self: Sized;
+    fn new() -> Self
+    where
+        Self: Sized;
     /// Adds a single element (provided as a byte slice) to the hash.
     fn add(&mut self, data: &[u8]);
     /// Removes a single element (provided as a byte slice) from the hash.
@@ -60,20 +62,20 @@ mod tests {
 
         ms.remove("world".as_bytes());
         assert_eq!(hashes.pop().unwrap(), ms.get_compressed());
-        
+
         ms.remove("foo".as_bytes());
         assert_eq!(hashes.pop().unwrap(), ms.get_compressed());
-        
+
         assert_eq!(ms.get_compressed(), None);
     }
 
     fn test_permutations_of_subsets_impl<T: MultisetHash>() {
         let test_set = vec!["1", "2", "3", "4", "5", "6", "7"];
-        
+
         for r in 0..=test_set.len() {
             for subset in test_set.iter().combinations(r) {
                 let mut hash_values = HashSet::new();
-                
+
                 for perm in subset.iter().permutations(r) {
                     let mut ms = T::new();
                     for element in &perm {
@@ -81,7 +83,7 @@ mod tests {
                     }
                     hash_values.insert(ms.get_compressed());
                 }
-                
+
                 assert_eq!(
                     hash_values.len(),
                     1,
@@ -102,14 +104,14 @@ mod tests {
             "date".as_bytes(),
             "elderberry".as_bytes(),
         ];
-        
+
         ms.add_elements(&elements);
-        
+
         let mut ms_seq = T::new();
         for &elem in &elements {
             ms_seq.add(elem);
         }
-        
+
         assert_eq!(ms.get_compressed(), ms_seq.get_compressed());
     }
 
@@ -122,17 +124,17 @@ mod tests {
             "kiwi".as_bytes(),
             "lemon".as_bytes(),
         ];
-        
+
         ms.add_elements(&elements);
         ms.remove_elements(&["grape".as_bytes(), "lemon".as_bytes()]);
-        
+
         let mut ms_expected = T::new();
         for &elem in &elements {
             if elem != "grape".as_bytes() && elem != "lemon".as_bytes() {
                 ms_expected.add(elem);
             }
         }
-        
+
         assert_eq!(ms.get_compressed(), ms_expected.get_compressed());
     }
 

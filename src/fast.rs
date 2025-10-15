@@ -1,5 +1,5 @@
-use rayon::prelude::*;
 use crate::MultisetHash;
+use rayon::prelude::*;
 
 #[derive(Clone)]
 pub struct FastMultisetHash {
@@ -42,7 +42,12 @@ impl FastMultisetHash {
             .par_iter()
             .map(|element| {
                 let h = Self::h(element.as_ref());
-                [h[0].wrapping_neg(), h[1].wrapping_neg(), h[2].wrapping_neg(), h[3].wrapping_neg()]
+                [
+                    h[0].wrapping_neg(),
+                    h[1].wrapping_neg(),
+                    h[2].wrapping_neg(),
+                    h[3].wrapping_neg(),
+                ]
             })
             .reduce(|| [0, 0, 0, 0], Self::add_256);
         self.current = Self::add_256(self.current, sum);
@@ -64,7 +69,6 @@ impl FastMultisetHash {
     pub fn get_digest(&self) -> Option<Vec<u8>> {
         self.get_compressed()
     }
-
 
     fn add_256(a: [u64; 4], b: [u64; 4]) -> [u64; 4] {
         [
@@ -98,25 +102,25 @@ impl FastMultisetHash {
                     h1 = h1.rotate_left(13);
                     h1 ^= b as u64;
                     h1 = h1.wrapping_mul(prime);
-                },
+                }
                 1 => {
                     h2 = h2.wrapping_add(b as u64);
                     h2 = h2.rotate_left(17);
                     h2 ^= b as u64;
                     h2 = h2.wrapping_mul(prime);
-                },
+                }
                 2 => {
                     h3 = h3.wrapping_add(b as u64);
                     h3 = h3.rotate_left(19);
                     h3 ^= b as u64;
                     h3 = h3.wrapping_mul(prime);
-                },
+                }
                 3 => {
                     h4 = h4.wrapping_add(b as u64);
                     h4 = h4.rotate_left(23);
                     h4 ^= b as u64;
                     h4 = h4.wrapping_mul(prime);
-                },
+                }
                 _ => unreachable!(),
             }
         }
@@ -163,8 +167,8 @@ impl MultisetHash for FastMultisetHash {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashSet;
     use rand::prelude::*;
+    use std::collections::HashSet;
 
     #[test]
     fn test_intensive_basic() {
@@ -175,7 +179,7 @@ mod tests {
         // We'll record the state after each operation (including the initial empty state).
         let mut state_stack: Vec<Option<Vec<u8>>> = Vec::new();
         state_stack.push(ms.get_compressed()); // initial state (should be None for empty)
-        // Also record the values we add (as u128)
+                                               // Also record the values we add (as u128)
         let mut elements: Vec<u128> = Vec::new();
 
         // Perform a series of additions.
@@ -233,3 +237,4 @@ mod tests {
         );
     }
 }
+

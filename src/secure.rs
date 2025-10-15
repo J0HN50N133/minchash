@@ -1,10 +1,10 @@
-use k256::{ProjectivePoint, Scalar};
+use crate::MultisetHash;
 use blake3;
-use k256::elliptic_curve::sec1::ToEncodedPoint;
 use k256::elliptic_curve::bigint::U256;
 use k256::elliptic_curve::ops::Reduce;
+use k256::elliptic_curve::sec1::ToEncodedPoint;
+use k256::{ProjectivePoint, Scalar};
 use rayon::prelude::*;
-use crate::MultisetHash;
 
 #[derive(Clone)]
 pub struct SecureMultisetHash {
@@ -114,8 +114,8 @@ impl MultisetHash for SecureMultisetHash {
 mod tests {
     use super::*;
     use k256::Scalar;
-    use std::collections::HashMap;
     use rand::prelude::*;
+    use std::collections::HashMap;
 
     #[test]
     fn test_complex_random_operations() {
