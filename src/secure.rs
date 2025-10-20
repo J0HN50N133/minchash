@@ -1,5 +1,4 @@
 use crate::MultisetHash;
-use blake3;
 use k256::elliptic_curve::bigint::U256;
 use k256::elliptic_curve::ops::Reduce;
 use k256::elliptic_curve::sec1::ToEncodedPoint;
@@ -9,6 +8,12 @@ use rayon::prelude::*;
 #[derive(Clone)]
 pub struct SecureMultisetHash {
     pub current: ProjectivePoint,
+}
+
+impl Default for SecureMultisetHash {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SecureMultisetHash {
@@ -26,7 +31,7 @@ impl SecureMultisetHash {
         self.current += -Self::h(data);
     }
 
-    pub fn add_elements<'a, T>(&mut self, elements: &'a [T])
+    pub fn add_elements<T>(&mut self, elements: &[T])
     where
         T: AsRef<[u8]> + Sync,
     {
@@ -37,7 +42,7 @@ impl SecureMultisetHash {
         self.current += sum;
     }
 
-    pub fn remove_elements<'a, T>(&mut self, elements: &'a [T])
+    pub fn remove_elements<T>(&mut self, elements: &[T])
     where
         T: AsRef<[u8]> + Sync,
     {
@@ -75,6 +80,7 @@ impl SecureMultisetHash {
 }
 
 impl MultisetHash for SecureMultisetHash {
+    type Proof = Self;
     fn new() -> Self {
         Self::new()
     }
@@ -108,6 +114,18 @@ impl MultisetHash for SecureMultisetHash {
     fn get_digest(&self) -> Option<Vec<u8>> {
         self.get_digest()
     }
+
+    fn generate_proof(&self, data: &[u8]) -> Option<Self::Proof> {
+        let mut proof_hash = self.clone();
+        proof_hash.remove(data);
+        Some(proof_hash)
+    }
+
+    fn verify_proof(&self, data: &[u8], proof: &Self::Proof) -> bool {
+        let mut verified_hash = proof.clone();
+        verified_hash.add(data);
+        self.current == verified_hash.current
+    }
 }
 
 #[cfg(test)]
@@ -139,14 +157,9 @@ mod tests {
             if op == 0 {
                 ms.add(elem.as_bytes());
                 *counts.get_mut(&elem).unwrap() += 1;
-            } else {
-                if *counts.get(&elem).unwrap() > 0 {
-                    ms.remove(elem.as_bytes());
-                    *counts.get_mut(&elem).unwrap() -= 1;
-                } else {
-                    ms.add(elem.as_bytes());
-                    *counts.get_mut(&elem).unwrap() += 1;
-                }
+            } else if *counts.get(&elem).unwrap() > 0 {
+                ms.remove(elem.as_bytes());
+                *counts.get_mut(&elem).unwrap() -= 1;
             }
         }
 

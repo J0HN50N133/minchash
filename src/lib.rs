@@ -5,6 +5,7 @@ pub use fast::FastMultisetHash;
 pub use secure::SecureMultisetHash;
 
 pub trait MultisetHash: Clone {
+    type Proof;
     /// Creates a new, empty multiset hash.
     fn new() -> Self
     where
@@ -14,17 +15,22 @@ pub trait MultisetHash: Clone {
     /// Removes a single element (provided as a byte slice) from the hash.
     fn remove(&mut self, data: &[u8]);
     /// Adds multiple elements (in parallel) to the hash.
-    fn add_elements<'a, T>(&mut self, elements: &'a [T])
+    fn add_elements<T>(&mut self, elements: &[T])
     where
         T: AsRef<[u8]> + Sync;
     /// Removes multiple elements (in parallel) from the hash.
-    fn remove_elements<'a, T>(&mut self, elements: &'a [T])
+    fn remove_elements<T>(&mut self, elements: &[T])
     where
         T: AsRef<[u8]> + Sync;
     /// Returns the current “compressed” state as a vector of bytes.
     fn get_compressed(&self) -> Option<Vec<u8>>;
     /// Returns a 32‑byte digest of the current state.
     fn get_digest(&self) -> Option<Vec<u8>>;
+
+    // generate proof for an element
+    fn generate_proof(&self, element: &[u8]) -> Option<Self::Proof>;
+    /// verify
+    fn verify_proof(&self, element: &[u8], proof: &Self::Proof) -> bool;
 }
 
 #[cfg(test)]
@@ -180,5 +186,42 @@ mod tests {
     fn test_parallel_consistency() {
         test_parallel_consistency_impl::<SecureMultisetHash>();
         test_parallel_consistency_impl::<FastMultisetHash>();
+    }
+
+    fn test_remove_then_add_impl<T: MultisetHash>() {
+        let mut ms1 = T::new();
+        ms1.remove(b"foo");
+        ms1.add(b"foo");
+        ms1.add(b"foo");
+        let ms1_compressed = ms1.get_compressed();
+
+        let mut ms2 = T::new();
+        ms2.add(b"foo");
+        let ms2_compressed = ms2.get_compressed();
+
+        assert_eq!(ms1_compressed, ms2_compressed);
+        assert!(ms1.get_digest().is_some_and(|d| d.len() == 32));
+    }
+
+    #[test]
+    fn test_remove_then_add() {
+        test_remove_then_add_impl::<SecureMultisetHash>();
+        test_remove_then_add_impl::<FastMultisetHash>();
+    }
+
+    fn test_proofs_impl<T: MultisetHash>() {
+        let mut ms = T::new();
+        ms.add(b"foo");
+        ms.add(b"bar");
+
+        let proof = ms.generate_proof(b"foo").unwrap();
+        assert!(ms.verify_proof(b"foo", &proof));
+        assert!(!ms.verify_proof(b"bar", &proof));
+    }
+
+    #[test]
+    fn test_proofs() {
+        test_proofs_impl::<SecureMultisetHash>();
+        test_proofs_impl::<FastMultisetHash>();
     }
 }

@@ -23,7 +23,7 @@ impl FastMultisetHash {
         self.current = Self::sub_256(self.current, h);
     }
 
-    pub fn add_elements<'a, T>(&mut self, elements: &'a [T])
+    pub fn add_elements<T>(&mut self, elements: &[T])
     where
         T: AsRef<[u8]> + Sync,
     {
@@ -34,7 +34,7 @@ impl FastMultisetHash {
         self.current = Self::add_256(self.current, sum);
     }
 
-    pub fn remove_elements<'a, T>(&mut self, elements: &'a [T])
+    pub fn remove_elements<T>(&mut self, elements: &[T])
     where
         T: AsRef<[u8]> + Sync,
     {
@@ -129,6 +129,7 @@ impl FastMultisetHash {
 }
 
 impl MultisetHash for FastMultisetHash {
+    type Proof = Self;
     fn new() -> Self {
         Self::new() // Call the inherent impl
     }
@@ -161,6 +162,18 @@ impl MultisetHash for FastMultisetHash {
 
     fn get_digest(&self) -> Option<Vec<u8>> {
         self.get_digest() // Call the inherent impl
+    }
+
+    fn generate_proof(&self, data: &[u8]) -> Option<Self> {
+        let mut proof_hash = self.clone();
+        proof_hash.remove(data);
+        Some(proof_hash)
+    }
+
+    fn verify_proof(&self, data: &[u8], proof: &Self) -> bool {
+        let mut verified_hash = proof.clone();
+        verified_hash.add(data);
+        self.current == verified_hash.current
     }
 }
 
@@ -237,4 +250,3 @@ mod tests {
         );
     }
 }
-
